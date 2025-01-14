@@ -34,7 +34,6 @@ document.getElementById('processButton').addEventListener('click', () => {
                     throw new Error('Tidak ada tanda kurung dalam nama file.');
                 }
             } else if (mode.startsWith('last')) {
-                // Mode Terakhir N Karakter
                 const charCountStr = mode.replace('last', '');
                 const charCount = parseInt(charCountStr, 10);
 
@@ -48,17 +47,14 @@ document.getElementById('processButton').addEventListener('click', () => {
                     throw new Error('Jumlah karakter melebihi panjang nama file.');
                 }
             } else if (mode === 'fileName') {
-                // Mode baru: Menggunakan nama file awal
                 newFileName = `${namePart}.vcf`;
             } else {
                 throw new Error('Mode tidak dikenal. Harap pilih mode yang valid.');
             }
 
             // Proses file menjadi VCF
-            processTxtToVcf(file, newFileName, globalContactName);
+            generateDownloadLink(file, newFileName, globalContactName, listItem);
 
-            listItem.innerHTML = `<span>${fileName} → ${newFileName}</span>`;
-            listItem.classList.add('success');
         } catch (error) {
             listItem.classList.add('error');
             listItem.innerHTML = `<span>${fileName}</span><span class="error-msg">${error.message}</span>`;
@@ -68,35 +64,31 @@ document.getElementById('processButton').addEventListener('click', () => {
     });
 });
 
-function processTxtToVcf(file, newFileName, globalContactName) {
+function generateDownloadLink(file, newFileName, globalContactName, listItem) {
     const reader = new FileReader();
     reader.onload = () => {
         const txtContent = reader.result;
-        let localCounter = 1; // Counter lokal untuk angka berurutan dalam satu file
-        let currentCategory = 'Anggota'; // Kategori default
+        let localCounter = 1;
+        let currentCategory = 'Anggota';
         const vcfContent = txtContent
             .split('\n')
-            .filter(line => line.trim() !== '') // Hilangkan baris kosong
+            .filter(line => line.trim() !== '')
             .map(line => {
                 const contact = line.trim();
-                // Cek apakah baris ini adalah kata kunci klasifikasi atau angka
                 const newCategory = classifyContact(contact);
                 if (newCategory) {
-                    currentCategory = newCategory; // Update kategori jika ditemukan kata kunci
-                    localCounter = 1; // Reset counter ketika kategori berubah
+                    currentCategory = newCategory;
+                    localCounter = 1;
                 }
 
-                // Jika baris berisi angka, buat VCF, jika tidak, lewati
                 if (/^\d+$/.test(contact)) {
                     const contactName = `${globalContactName} ${localCounter}`;
-                    // Jika kategori Anggota, tidak perlu menambahkan kategori di nama kontak
-                    const fullContactName = currentCategory === 'Anggota' ? contactName : `${contactName} (${currentCategory})`; // Menambahkan kategori di nama kontak jika bukan Anggota
-
+                    const fullContactName = currentCategory === 'Anggota' ? contactName : `${contactName} (${currentCategory})`;
                     const contactVcard = `BEGIN:VCARD\nVERSION:3.0\nFN:${fullContactName}\nTEL:${contact}\nEND:VCARD\n`;
-                    localCounter++; // Increment counter lokal untuk setiap kontak
+                    localCounter++;
                     return contactVcard;
                 } else {
-                    return ''; // Mengabaikan baris yang bukan angka
+                    return '';
                 }
             })
             .join('\n');
@@ -105,27 +97,24 @@ function processTxtToVcf(file, newFileName, globalContactName) {
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = newFileName;
-        link.click();
+        link.textContent = `Unduh ${newFileName}`;
+        link.classList.add('download-link');
+        listItem.appendChild(link);
+        listItem.classList.add('success');
+        listItem.innerHTML += `<span> → Tautan tersedia untuk diunduh</span>`;
     };
     reader.readAsText(file);
 }
 
 // Fungsi untuk mengklasifikasikan kontak
 function classifyContact(contact) {
-    // Admin: 管理号|管理|管理员|admin|Admin
     if (contact.match(/管理号|管理|管理员|admin|Admin/)) {
         return 'Admin';
-    }
-    // Navy: 水軍|小号|水军|navy|Navy
-    else if (contact.match(/水軍|小号|水军|navy|Navy/)) {
+    } else if (contact.match(/水軍|小号|水军|navy|Navy/)) {
         return 'Navy';
-    }
-    // Anggota: 数据|客户|底料|进群资源|资料|Anggota
-    else if (contact.match(/数据|客户|底料|进群资源|资料|Anggota/)) {
+    } else if (contact.match(/数据|客户|底料|进群资源|资料|Anggota/)) {
         return 'Anggota';
-    }
-    // Jika tidak ada kecocokan, return null (tidak mengubah kategori)
-    else {
+    } else {
         return null;
     }
 }
