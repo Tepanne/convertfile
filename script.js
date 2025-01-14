@@ -33,8 +33,15 @@ document.getElementById('processButton').addEventListener('click', () => {
                 } else {
                     throw new Error('Tidak ada tanda kurung dalam nama file.');
                 }
-            } else if (mode === 'lastNCharacters') {
-                const charCount = parseInt(mode.replace('last', ''), 10);
+            } else if (mode.startsWith('last')) {
+                // Mode Terakhir N Karakter
+                const charCountStr = mode.replace('last', '');
+                const charCount = parseInt(charCountStr, 10);
+
+                if (isNaN(charCount) || charCount <= 0) {
+                    throw new Error('Jumlah karakter terakhir harus berupa angka yang valid.');
+                }
+
                 if (namePart.length >= charCount) {
                     newFileName = `${namePart.slice(-charCount)}.vcf`;
                 } else {
@@ -44,7 +51,7 @@ document.getElementById('processButton').addEventListener('click', () => {
                 // Mode baru: Menggunakan nama file awal
                 newFileName = `${namePart}.vcf`;
             } else {
-                throw new Error('Mode tidak dikenal.');
+                throw new Error('Mode tidak dikenal. Harap pilih mode yang valid.');
             }
 
             // Proses file menjadi VCF
